@@ -11,6 +11,20 @@ var crypto = require('crypto'),
     User = require('../models/user.js'),
     Post = require('../models/post.js');
 
+//支持文件上传功能
+var multer = require('multer');
+var storage = multer.diskStorage({
+  destination: function (req, file, cb) { //上传文件所在的目录
+    cb(null, './public/images');
+  },
+  filename: function (req, file, cb) {  //修改哦上传后的文件名，这里设置为原来的文件名
+    cb(null, file.originalname);
+  }
+});
+var upload = multer({
+  storage: storage
+});
+
 module.exports = function(app) {
   app.get('/', function (req, res) {
     Post.get(null, function (err, posts) {
@@ -132,6 +146,23 @@ module.exports = function(app) {
     req.session.user = null;
     req.flash('success', '登出成功!');
     res.redirect('/');
+  });
+
+  app.get('/upload', checkLogin);
+  app.get('/upload', function (req, res) {
+    res.render('upload', {
+      title: '文件上传',
+      user: req.session.user,
+      success: req.flash('success').toString(),
+      error: req.flash('error').toString()
+    });
+  });
+
+  //添加上传文件支持
+  app.post('/upload', checkLogin);
+  app.post('/upload', upload.array('field1', 5), function (req, res) { //第一个参数array表示可以同时上传多个文件，第二个参数5表示最多上传5个文件
+    req.flash('success', '文件上传成功！');
+    res.redirect('/upload');
   });
 
   function checkLogin(req, res, next) {
